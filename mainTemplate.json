@@ -1,0 +1,313 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+  "adminUserName": {
+      "type": "string",
+      "minLength": 1
+    },
+	  "adminLoginPassword": {
+      "type": "securestring"
+    },
+	  "DBname": {
+      "type": "string",
+      "minLength": 1
+    },
+	"location": {
+      "type": "string"
+    }
+  },
+  "variables": {
+    "SQLapi": "2014-04-01",
+    "DBsession": "[concat(parameters('DBname'),'/','OSSession')]",
+	"DBoutsystems": "[concat(parameters('DBname'),'/','OutSystems')]",
+    "AllowAllInternal": "[concat(parameters('DBname'),'/','AllowAllWindowsAzureIps')]",	
+	"AllowPIPVM": "[concat(parameters('DBname'),'/','AllowPIPVM')]",	
+	"APIVersion": "2015-06-15",
+	"vnetID": "[resourceId('Microsoft.Network/virtualNetworks', 'VNET')]",
+	"VMSize": "Standard_D1_v2",
+	"VMName": "OutSystems",
+	"ImagePublisher": "MicrosoftWindowsServer",
+	"ImageOffer": "WindowsServer",
+	"WindowsOSVersion": "2016-Datacenter"
+	
+  },
+  "resources": [
+  
+      {
+      "apiVersion": "2017-03-30",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkInterfaces/', 'OUTSYSTEMS-NIC')]",
+		"[resourceId('Microsoft.Sql/servers', parameters('DBname'))]"
+      ],
+      "location": "[parameters('location')]",
+      "name": "[variables('VMName')]",
+	  "type": "Microsoft.Compute/virtualMachines",
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[variables('VMSize')]"
+        },
+        "osProfile": {
+          "computerName": "[variables('VMName')]",
+          "adminUsername": "[parameters('adminUserName')]",
+          "adminPassword": "[parameters('adminLoginPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('ImagePublisher')]",
+            "offer": "[variables('ImageOffer')]",
+            "sku": "[variables('WindowsOSVersion')]",
+            "version": "latest"
+          },
+          "osDisk": {
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', 'OUTSYSTEMS-NIC')]"
+            }
+          ]
+        }
+		},
+		"resources": [
+		{
+    "apiVersion": "2015-06-15",
+    "type": "extensions",
+    "name": "outsystems-config",
+    "location": "[parameters('location')]",
+    "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/', variables('VMName'))]"
+    ],
+    "tags": {
+        "displayName": "outsystems-config"
+    },
+    "properties": {
+        "publisher": "Microsoft.Compute",
+        "type": "CustomScriptExtension",
+        "typeHandlerVersion": "1.9",
+        "autoUpgradeMinorVersion": true,
+        "settings": {
+            "fileUris": [
+                "https://outsysscripts.blob.core.windows.net/scrpt/outsysdeploy.ps1"
+            ]
+        },
+        "protectedSettings": {
+            "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File outsysdeploy.ps1 -dbname ', parameters('DBname'), ' -adminname ',  parameters('adminUserName'), ' -adminpwd ',parameters('adminLoginPassword') )]",
+            "storageAccountName": "outsysscripts",
+            "storageAccountKey": "ezj78qFinmAm/92vD62m4isPHVT1HhRcZJlceG7RQ5rmj9uQyBqfecgho1II4TFHhSHjU5dQuotzdLQgIYm6gw=="
+        }
+			}
+		}
+		
+		]
+		
+      
+
+    },
+	
+
+    {
+        "type": "Microsoft.Sql/servers",
+        "kind": "v12.0",
+        "name": "[parameters('DBname')]",
+        "apiVersion": "[variables('SQLapi')]",
+        "location": "[parameters('location')]",
+        "scale": null,
+        "properties": {
+            "administratorLogin": "[parameters('adminUserName')]",
+            "administratorLoginPassword": "[parameters('adminLoginPassword')]",
+            "version": "12.0"
+        },
+        "dependsOn": []
+    },
+	{
+        "type": "Microsoft.Sql/servers/databases",
+        "kind": "v12.0",
+        "name": "[variables('DBsession')]",
+        "apiVersion": "[variables('SQLapi')]",
+        "location": "[parameters('location')]",
+		"properties": {
+            "collation": "SQL_Latin1_General_CP1_CI_AS",
+			"requestedServiceObjectiveName": "Basic"
+        },
+        "dependsOn": [
+			"[resourceId('Microsoft.Sql/servers', parameters('DBname'))]"
+        ]
+    },
+	{
+        "type": "Microsoft.Sql/servers/databases",
+        "kind": "v12.0",
+        "name": "[variables('DBoutsystems')]",
+        "apiVersion": "[variables('SQLapi')]",
+        "location": "[parameters('location')]",
+        "properties": {
+            "collation": "SQL_Latin1_General_CP1_CI_AS",
+			"requestedServiceObjectiveName": "S1"
+        },
+        "dependsOn": [
+			"[resourceId('Microsoft.Sql/servers', parameters('DBname'))]"
+        ]
+    },
+	        
+	{
+        "type": "Microsoft.Sql/servers/firewallRules",
+        "kind": "v12.0",
+        "name": "[variables('AllowAllInternal')]",
+        "apiVersion": "2014-04-01-preview",
+        "location": "[parameters('location')]",
+        "scale": null,
+        "properties": {
+            "startIpAddress": "0.0.0.0",
+            "endIpAddress": "0.0.0.0"
+        },
+        "dependsOn": [
+            "[resourceId('Microsoft.Sql/servers', parameters('DBname'))]"
+        ]
+    },
+	
+		{
+        "type": "Microsoft.Sql/servers/firewallRules",
+        "kind": "v12.0",
+        "name": "[variables('AllowPIPVM')]",
+        "apiVersion": "2014-04-01-preview",
+        "location": "[parameters('location')]",
+        "scale": null,
+        "properties": {
+            "startIpAddress": "[reference('Microsoft.Network/publicIPAddresses/OUTSYSTEMS-PIP','2015-06-15').ipAddress]",
+            "endIpAddress": "[reference('Microsoft.Network/publicIPAddresses/OUTSYSTEMS-PIP','2015-06-15').ipAddress]"
+        },
+        "dependsOn": [
+            "[resourceId('Microsoft.Sql/servers', parameters('DBname'))]",
+			"[resourceId('Microsoft.Network/publicIPAddresses', 'OUTSYSTEMS-PIP')]"
+            ]
+    },
+	
+
+	{
+      "apiVersion": "[variables('APIVersion')]",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "VNETSG",
+      "location": "[parameters('location')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "rdp_rule",
+            "properties": {
+              "description": "Allow RDP",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "Internet",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "web_rule",
+            "properties": {
+              "description": "Allow WEB",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "80",
+              "sourceAddressPrefix": "Internet",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 110,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "https_rule",
+            "properties": {
+              "description": "Allow https",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "443",
+              "sourceAddressPrefix": "Internet",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 120,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+    },
+	
+	{
+      "name": "VNET",
+      "type": "Microsoft.Network/virtualNetworks",
+      "location": "[parameters('location')]",
+      "apiVersion": "[variables('APIVersion')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkSecurityGroups/', 'VNETSG')]"
+      ],
+      "tags": {
+        "displayName": "VNET"
+      },
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "11.0.0.0/24"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "Subnet",
+            "properties": {
+              "addressPrefix": "11.0.0.0/25",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'VNETSG')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+	
+	{
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "OUTSYSTEMS-PIP",
+      "location": "[parameters('location')]",
+      "properties": {
+        "publicIPAllocationMethod": "Static"
+      }
+    },
+	
+	{
+      "name": "OUTSYSTEMS-NIC",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/publicIPAddresses/', 'OUTSYSTEMS-PIP')]",
+		"[concat('Microsoft.Network/virtualNetworks/', 'VNET')]"
+      ],
+      "apiVersion": "2015-06-15",
+
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[concat(variables('vnetID'),'/subnets/','Subnet')]"
+              },
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'OUTSYSTEMS-PIP')]"
+              }
+            }
+          }
+        ]
+      }
+    }
+
+  ],
+  "outputs": {
+   }
+}
