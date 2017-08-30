@@ -106,7 +106,7 @@
                 "allowedSizes": [
                   "Standard_D2_v2",
                   "Standard_D3_v2",
-                  "Standard_D4_v2",
+                  "Standard_D4_v2"
                 ]
               },
               "osPlatform": "Windows",
@@ -114,7 +114,9 @@
                 "publisher": "MicrosoftWindowsServer",
                 "offer": "WindowsServer",
                 "sku": "2016-Datacenter"
-              }
+              },
+			  "count": 1,
+			  "visible": true
             }
           ]
         }
