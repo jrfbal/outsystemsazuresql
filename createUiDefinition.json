@@ -72,31 +72,11 @@
                 "required": true
               }
             },
-			        {
-          "name": "VMsetup",
-          "label": "Virtual Machine Setup",
-          "subLabel": {
-            "preValidation": "Configure the Front-End Environment",
-            "postValidation": "Done"
-          },
-          "bladeTitle": "VM Settings",
-          "elements": [
-            {
-              "name": "FENAME",
-              "type": "Microsoft.Common.TextBox",
-              "label": "VM hostname",
-              "toolTip": "Hostname for the VM.",
-              "defaultValue": "OutSystems",
-              "constraints": {
-                "required": true
-              }
-            },
-
             {
               "name": "FEVmSize",
               "type": "Microsoft.Compute.SizeSelector",
               "label": "Virtual machine size",
-              "toolTip": "The size of the Front-End VMs.",
+              "toolTip": "The size of the Front-End VMs",
               "recommendedSizes": [
                 "Standard_D2_v2",
                 "Standard_D3_v2"
@@ -106,7 +86,8 @@
                   "Standard_D2_v2",
                   "Standard_D3_v2",
                   "Standard_D4_v2"
-                ]
+                ],
+				"excludedSizes": []
               },
               "osPlatform": "Windows",
               "imageReference": {
