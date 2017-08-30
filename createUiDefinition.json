@@ -95,14 +95,13 @@
             {
               "name": "FEVmSize",
               "type": "Microsoft.Compute.SizeSelector",
-              "label": "Front-End Virtual machine size",
+              "label": "Virtual machine size",
               "toolTip": "The size of the Front-End VMs.",
               "recommendedSizes": [
                 "Standard_D2_v2",
                 "Standard_D3_v2"
               ],
               "constraints": {
-                "required": true,
                 "allowedSizes": [
                   "Standard_D2_v2",
                   "Standard_D3_v2",
