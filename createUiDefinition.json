@@ -109,7 +109,6 @@
 		"VMName": "[steps('VMsetup').FENAME]",
 		"VMSize": "[steps('VMsetup').FEVmSize]",
         "location": "[location()]"
-
       }
     }
 }
