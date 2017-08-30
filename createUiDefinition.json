@@ -20,7 +20,10 @@
               "type": "Microsoft.Compute.UserNameTextBox",
               "label": "Username",
               "toolTip": "Admin username for the virtual machine and SQL server.",
-              "osPlatform": "Windows"
+              "osPlatform": "Windows",
+			  "constraints": {
+                "required": true				
+              }
             },
 			{
               "name": "adminPassword",
@@ -32,6 +35,9 @@
               },
               "toolTip": {
                 "password": "Admin password for the VM and SQL."
+              },
+			  "constraints": {
+                "required": true				
               }
             },
 			{
