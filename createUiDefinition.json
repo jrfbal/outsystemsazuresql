@@ -105,6 +105,9 @@
       "outputs": {
         "adminUserName": "[steps('TrialSetup').adminUsername]",
         "adminLoginPassword": "[steps('TrialSetup').adminPassword.password]",
+		"DBnameparam": "[steps('TrialSetup').sqlname]",
+		"VMName": "[steps('VMsetup').FENAME]",
+		"VMSize": "[steps('VMsetup').FEVmSize]",
         "location": "[location()]"
 
       }
