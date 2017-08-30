@@ -9,24 +9,31 @@
 	  "adminLoginPassword": {
       "type": "securestring"
     },
-	  "DBname": {
+	"DBnameparam": {
       "type": "string",
       "minLength": 1
     },
 	"location": {
       "type": "string"
+    },
+	"VMSize":{
+      "type": "string",
+      "defaultValue": "Standard_D1_v2"
+    },
+	"VMName":{
+      "type": "string",
+      "defaultValue": "OutSystems"
     }
   },
   "variables": {
     "SQLapi": "2014-04-01",
-    "DBsession": "[concat(parameters('DBname'),'/','OSSession')]",
-	"DBoutsystems": "[concat(parameters('DBname'),'/','OutSystems')]",
-    "AllowAllInternal": "[concat(parameters('DBname'),'/','AllowAllWindowsAzureIps')]",	
-	"AllowPIPVM": "[concat(parameters('DBname'),'/','AllowPIPVM')]",	
+	"DBname": "[concat(parameters('DBnameparam'),uniqueString(resourceGroup().id))]",
+    "DBsession": "[concat(variables('DBname'),'/','OSSession')]",
+	"DBoutsystems": "[concat(variables('DBname'),'/','OutSystems')]",
+    "AllowAllInternal": "[concat(variables('DBname'),'/','AllowAllWindowsAzureIps')]",	
+	"AllowPIPVM": "[concat(variables('DBname'),'/','AllowPIPVM')]",	
 	"APIVersion": "2015-06-15",
 	"vnetID": "[resourceId('Microsoft.Network/virtualNetworks', 'VNET')]",
-	"VMSize": "Standard_D1_v2",
-	"VMName": "OutSystems",
 	"ImagePublisher": "MicrosoftWindowsServer",
 	"ImageOffer": "WindowsServer",
 	"WindowsOSVersion": "2016-Datacenter"
@@ -38,17 +45,17 @@
       "apiVersion": "2017-03-30",
       "dependsOn": [
         "[concat('Microsoft.Network/networkInterfaces/', 'OUTSYSTEMS-NIC')]",
-		"[resourceId('Microsoft.Sql/servers', parameters('DBname'))]"
+		"[resourceId('Microsoft.Sql/servers', variables('DBname'))]"
       ],
       "location": "[parameters('location')]",
-      "name": "[variables('VMName')]",
+      "name": "[parameters('VMName')]",
 	  "type": "Microsoft.Compute/virtualMachines",
       "properties": {
         "hardwareProfile": {
           "vmSize": "[variables('VMSize')]"
         },
         "osProfile": {
-          "computerName": "[variables('VMName')]",
+          "computerName": "[parameters('VMName')]",
           "adminUsername": "[parameters('adminUserName')]",
           "adminPassword": "[parameters('adminLoginPassword')]"
         },
@@ -78,7 +85,7 @@
     "name": "outsystems-config",
     "location": "[parameters('location')]",
     "dependsOn": [
-        "[concat('Microsoft.Compute/virtualMachines/', variables('VMName'))]"
+        "[concat('Microsoft.Compute/virtualMachines/', parameters('VMName'))]"
     ],
     "tags": {
         "displayName": "outsystems-config"
@@ -94,7 +101,7 @@
             ]
         },
         "protectedSettings": {
-            "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File outsysdeploy.ps1 -dbname ', parameters('DBname'), ' -adminname ',  parameters('adminUserName'), ' -adminpwd ',parameters('adminLoginPassword') )]",
+            "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File outsysdeploy.ps1 -dbname ', variables('DBname'), ' -adminname ',  parameters('adminUserName'), ' -adminpwd ',parameters('adminLoginPassword') )]",
             "storageAccountName": "outsysscripts",
             "storageAccountKey": "ezj78qFinmAm/92vD62m4isPHVT1HhRcZJlceG7RQ5rmj9uQyBqfecgho1II4TFHhSHjU5dQuotzdLQgIYm6gw=="
         }
@@ -111,7 +118,7 @@
     {
         "type": "Microsoft.Sql/servers",
         "kind": "v12.0",
-        "name": "[parameters('DBname')]",
+        "name": "[variables('DBname')]",
         "apiVersion": "[variables('SQLapi')]",
         "location": "[parameters('location')]",
         "scale": null,
@@ -133,7 +140,7 @@
 			"requestedServiceObjectiveName": "Basic"
         },
         "dependsOn": [
-			"[resourceId('Microsoft.Sql/servers', parameters('DBname'))]"
+			"[resourceId('Microsoft.Sql/servers', variables('DBname'))]"
         ]
     },
 	{
@@ -147,7 +154,7 @@
 			"requestedServiceObjectiveName": "S1"
         },
         "dependsOn": [
-			"[resourceId('Microsoft.Sql/servers', parameters('DBname'))]"
+			"[resourceId('Microsoft.Sql/servers', variables('DBname'))]"
         ]
     },
 	        
@@ -163,7 +170,7 @@
             "endIpAddress": "0.0.0.0"
         },
         "dependsOn": [
-            "[resourceId('Microsoft.Sql/servers', parameters('DBname'))]"
+            "[resourceId('Microsoft.Sql/servers', variables('DBname'))]"
         ]
     },
 	
@@ -179,7 +186,7 @@
             "endIpAddress": "[reference('Microsoft.Network/publicIPAddresses/OUTSYSTEMS-PIP','2015-06-15').ipAddress]"
         },
         "dependsOn": [
-            "[resourceId('Microsoft.Sql/servers', parameters('DBname'))]",
+            "[resourceId('Microsoft.Sql/servers', variables('DBname'))]",
 			"[resourceId('Microsoft.Network/publicIPAddresses', 'OUTSYSTEMS-PIP')]"
             ]
     },
