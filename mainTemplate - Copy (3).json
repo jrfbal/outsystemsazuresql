@@ -1,0 +1,573 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+  "adminUserName": {
+      "type": "string",
+      "minLength": 1
+    },
+	  "adminLoginPassword": {
+      "type": "securestring"
+    },
+	"location": {
+      "type": "string"
+    },
+	"VMSize":{
+      "type": "string",
+      "defaultValue": "Standard_D1_v2"
+    },
+	"VMName":{
+      "type": "string",
+      "defaultValue": "OutSystems"
+    }
+  },
+  "variables": {
+    "SQLapi": "2014-04-01",
+	"DBname": "[concat('outsystems-trial-',uniqueString(resourceGroup().id))]",
+    "DBsession": "[concat(variables('DBname'),'/','OSSession')]",
+	"DBoutsystems": "[concat(variables('DBname'),'/','OutSystems')]",
+    "AllowAllInternal": "[concat(variables('DBname'),'/','AllowAllWindowsAzureIps')]",	
+	"AllowPIPVM": "[concat(variables('DBname'),'/','AllowPIPVM')]",	
+	"APIVersion": "2015-06-15",
+	"vnetID": "[resourceId('Microsoft.Network/virtualNetworks', 'VNET')]",
+	"ImagePublisher": "MicrosoftWindowsServer",
+	"ImageOffer": "WindowsServer",
+	"WindowsOSVersion": "2016-Datacenter",
+	"sqladminUserName": "[concat(parameters('adminUserName'),'-sql')]"	
+  },
+  "resources": [
+  
+      {
+      "apiVersion": "2017-03-30",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkInterfaces/', 'OUTSYSTEMS-NIC')]",
+		"[resourceId('Microsoft.Sql/servers', variables('DBname'))]"
+      ],
+      "location": "[parameters('location')]",
+      "name": "[parameters('VMName')]",
+	  "type": "Microsoft.Compute/virtualMachines",
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('VMSize')]"
+        },
+        "osProfile": {
+          "computerName": "[parameters('VMName')]",
+          "adminUsername": "[parameters('adminUserName')]",
+          "adminPassword": "[parameters('adminLoginPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('ImagePublisher')]",
+            "offer": "[variables('ImageOffer')]",
+            "sku": "[variables('WindowsOSVersion')]",
+            "version": "latest"
+          },
+          "osDisk": {
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', 'OUTSYSTEMS-NIC')]"
+            }
+          ]
+        }
+		},
+		"resources": [
+		{
+    "apiVersion": "2015-06-15",
+    "type": "extensions",
+    "name": "ASP.NET-config",
+    "location": "[parameters('location')]",
+    "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/', parameters('VMName'))]"
+    ],
+    "tags": {
+        "displayName": "ASP.NET-config"
+    },
+    "properties": {
+        "publisher": "Microsoft.Compute",
+        "type": "CustomScriptExtension",
+        "typeHandlerVersion": "1.9",
+        "autoUpgradeMinorVersion": false,
+        "settings": {
+            "fileUris": [
+                "https://outsystemstrialsources.blob.core.windows.net/bin/NDP461-KB3102436-x86-x64-AllOS-ENU.exe"
+            ]
+        },
+        "protectedSettings": {
+            "commandToExecute": "NDP461-KB3102436-x86-x64-AllOS-ENU.exe /q /norestart /ChainingPackage ADMINDEPLOYMENT",
+            "storageAccountName": "outsystemstrialsources",
+            "storageAccountKey": "Ok+pbaIb5isxjgjok/NJwnZyYLJ2WZ6Uj46KdfM24EZy5FMULTKttiBkGoWMzHlEbj4EdEJbNN/faT4DSHuzcQ=="
+        }
+			}
+		},
+				{
+    "apiVersion": "2015-06-15",
+    "type": "extensions",
+    "name": "buildtools-config",
+    "location": "[parameters('location')]",
+    "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/', parameters('VMName'))]"
+    ],
+    "tags": {
+        "displayName": "buildtools-config"
+    },
+    "properties": {
+        "publisher": "Microsoft.Compute",
+        "type": "CustomScriptExtension",
+        "typeHandlerVersion": "1.9",
+        "autoUpgradeMinorVersion": false,
+        "settings": {
+            "fileUris": [
+                "https://outsystemstrialsources.blob.core.windows.net/bin/BuildTools_Full.exe"
+            ]
+        },
+        "protectedSettings": {
+            "commandToExecute": "BuildTools_Full.exe /Quiet",
+            "storageAccountName": "outsystemstrialsources",
+            "storageAccountKey": "Ok+pbaIb5isxjgjok/NJwnZyYLJ2WZ6Uj46KdfM24EZy5FMULTKttiBkGoWMzHlEbj4EdEJbNN/faT4DSHuzcQ=="
+        }
+			}
+		},
+				{
+    "apiVersion": "2015-06-15",
+    "type": "extensions",
+    "name": "features-config",
+    "location": "[parameters('location')]",
+    "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/', parameters('VMName'))]"
+    ],
+    "tags": {
+        "displayName": "features-config"
+    },
+    "properties": {
+        "publisher": "Microsoft.Compute",
+        "type": "CustomScriptExtension",
+        "typeHandlerVersion": "1.9",
+        "autoUpgradeMinorVersion": false,
+        "settings": {
+            "fileUris": [
+                "https://outsystemstrialsources.blob.core.windows.net/bin/features.ps1"
+            ]
+        },
+        "protectedSettings": {
+            "commandToExecute": "powershell -ExecutionPolicy Unrestricted -File features.ps1",
+            "storageAccountName": "outsystemstrialsources",
+            "storageAccountKey": "Ok+pbaIb5isxjgjok/NJwnZyYLJ2WZ6Uj46KdfM24EZy5FMULTKttiBkGoWMzHlEbj4EdEJbNN/faT4DSHuzcQ=="
+        }
+			}
+		},
+				{
+    "apiVersion": "2015-06-15",
+    "type": "extensions",
+    "name": "DevelopmentEnvironment-config",
+    "location": "[parameters('location')]",
+    "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/', parameters('VMName'))]"
+    ],
+    "tags": {
+        "displayName": "DevelopmentEnvironment-config"
+    },
+    "properties": {
+        "publisher": "Microsoft.Compute",
+        "type": "CustomScriptExtension",
+        "typeHandlerVersion": "1.9",
+        "autoUpgradeMinorVersion": false,
+        "settings": {
+            "fileUris": [
+                "https://outsystemstrialsources.blob.core.windows.net/bin/DevelopmentEnvironment.exe"
+            ]
+        },
+        "protectedSettings": {
+            "commandToExecute": "DevelopmentEnvironment.exe /S",
+            "storageAccountName": "outsystemstrialsources",
+            "storageAccountKey": "Ok+pbaIb5isxjgjok/NJwnZyYLJ2WZ6Uj46KdfM24EZy5FMULTKttiBkGoWMzHlEbj4EdEJbNN/faT4DSHuzcQ=="
+        }
+			}
+		},
+				{
+    "apiVersion": "2015-06-15",
+    "type": "extensions",
+    "name": "PlatformServer-config",
+    "location": "[parameters('location')]",
+    "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/', parameters('VMName'))]"
+    ],
+    "tags": {
+        "displayName": "PlatformServer-config"
+    },
+    "properties": {
+        "publisher": "Microsoft.Compute",
+        "type": "CustomScriptExtension",
+        "typeHandlerVersion": "1.9",
+        "autoUpgradeMinorVersion": false,
+        "settings": {
+            "fileUris": [
+                "https://outsystemstrialsources.blob.core.windows.net/bin/PlatformServer.exe"
+            ]
+        },
+        "protectedSettings": {
+            "commandToExecute": "PlatformServer.exe /S",
+            "storageAccountName": "outsystemstrialsources",
+            "storageAccountKey": "Ok+pbaIb5isxjgjok/NJwnZyYLJ2WZ6Uj46KdfM24EZy5FMULTKttiBkGoWMzHlEbj4EdEJbNN/faT4DSHuzcQ=="
+        }
+			}
+		},
+		
+	{
+    "apiVersion": "2015-06-15",
+    "type": "extensions",
+    "name": "outsystems-config",
+    "location": "[parameters('location')]",
+    "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/', parameters('VMName'))]"
+    ],
+    "tags": {
+        "displayName": "outsystems-config"
+    },
+    "properties": {
+        "publisher": "Microsoft.Compute",
+        "type": "CustomScriptExtension",
+        "typeHandlerVersion": "1.9",
+        "autoUpgradeMinorVersion": false,
+        "settings": {
+            "fileUris": [
+                "https://outsystemstrialsources.blob.core.windows.net/bin/outsysconfig.ps1"
+            ]
+        },
+        "protectedSettings": {
+            "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File outsysdeploy.ps1 -dbname ', variables('DBname'), ' -adminname ',  variables('sqladminUserName'), ' -adminpwd ',parameters('adminLoginPassword') )]",
+            "storageAccountName": "outsystemstrialsources",
+            "storageAccountKey": "Ok+pbaIb5isxjgjok/NJwnZyYLJ2WZ6Uj46KdfM24EZy5FMULTKttiBkGoWMzHlEbj4EdEJbNN/faT4DSHuzcQ=="
+        }
+			}
+	},
+		
+	{
+    "apiVersion": "2015-06-15",
+    "type": "extensions",
+    "name": "startup-config",
+    "location": "[parameters('location')]",
+    "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/', parameters('VMName'))]"
+    ],
+    "tags": {
+        "displayName": "startup-config"
+    },
+    "properties": {
+        "publisher": "Microsoft.Compute",
+        "type": "CustomScriptExtension",
+        "typeHandlerVersion": "1.9",
+        "autoUpgradeMinorVersion": false,
+        "settings": {
+            "fileUris": [
+                "https://outsystemstrialsources.blob.core.windows.net/bin/OSStartup.bat"
+            ]
+        },
+        "protectedSettings": {
+            "commandToExecute": "copy OSStartup.bat \"C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\StartUp\"",
+            "storageAccountName": "outsystemstrialsources",
+            "storageAccountKey": "Ok+pbaIb5isxjgjok/NJwnZyYLJ2WZ6Uj46KdfM24EZy5FMULTKttiBkGoWMzHlEbj4EdEJbNN/faT4DSHuzcQ=="
+        }
+			}
+		},
+		
+	{
+    "apiVersion": "2015-06-15",
+    "type": "extensions",
+    "name": "license-config",
+    "location": "[parameters('location')]",
+    "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/', parameters('VMName'))]"
+    ],
+    "tags": {
+        "displayName": "license-config"
+    },
+    "properties": {
+        "publisher": "Microsoft.Compute",
+        "type": "CustomScriptExtension",
+        "typeHandlerVersion": "1.9",
+        "autoUpgradeMinorVersion": false,
+        "settings": {
+            "fileUris": [
+                "https://outsystemstrialsources.blob.core.windows.net/bin/license.lic"
+            ]
+        },
+        "protectedSettings": {
+            "commandToExecute": "\"C:\\Program Files\\OutSystems\\Platform Server\\ConfigurationTool.com\" /UploadLicense license.lic",
+            "storageAccountName": "outsystemstrialsources",
+            "storageAccountKey": "Ok+pbaIb5isxjgjok/NJwnZyYLJ2WZ6Uj46KdfM24EZy5FMULTKttiBkGoWMzHlEbj4EdEJbNN/faT4DSHuzcQ=="
+        }
+			}
+	},
+	
+	{
+    "apiVersion": "2015-06-15",
+    "type": "extensions",
+    "name": "lifetime-config",
+    "location": "[parameters('location')]",
+    "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/', parameters('VMName'))]"
+    ],
+    "tags": {
+        "displayName": "lifetime-config"
+    },
+    "properties": {
+        "publisher": "Microsoft.Compute",
+        "type": "CustomScriptExtension",
+        "typeHandlerVersion": "1.9",
+        "autoUpgradeMinorVersion": false,
+        "settings": {
+            "fileUris": [
+				"https://outsystemstrialsources.blob.core.windows.net/bin/temp.zip"
+            ]
+        },
+        "protectedSettings": {
+            "commandToExecute": "\"C:\\Program Files\\Common Files\\OutSystems\\10.0\\OSPTool.com\" /Publish \"C:\\Program Files\\OutSystems\\Platform Server\\LifeTime.osp\" localhost admin admin",
+            "storageAccountName": "outsystemstrialsources",
+            "storageAccountKey": "Ok+pbaIb5isxjgjok/NJwnZyYLJ2WZ6Uj46KdfM24EZy5FMULTKttiBkGoWMzHlEbj4EdEJbNN/faT4DSHuzcQ=="
+        }
+			}
+	},
+	
+		{
+    "apiVersion": "2015-06-15",
+    "type": "extensions",
+    "name": "osstart-config",
+    "location": "[parameters('location')]",
+    "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/', parameters('VMName'))]"
+    ],
+    "tags": {
+        "displayName": "osstart-config"
+    },
+    "properties": {
+        "publisher": "Microsoft.Compute",
+        "type": "CustomScriptExtension",
+        "typeHandlerVersion": "1.9",
+        "autoUpgradeMinorVersion": false,
+        "settings": {
+            "fileUris": [
+				"https://outsystemstrialsources.blob.core.windows.net/bin/OSSstartconfig.ps1"
+		        ]
+        },
+        "protectedSettings": {
+            "commandToExecute": "powershell -ExecutionPolicy Unrestricted -File OSSstartconfig.ps1",
+            "storageAccountName": "outsystemstrialsources",
+            "storageAccountKey": "Ok+pbaIb5isxjgjok/NJwnZyYLJ2WZ6Uj46KdfM24EZy5FMULTKttiBkGoWMzHlEbj4EdEJbNN/faT4DSHuzcQ=="
+        }
+			}
+	}
+		
+		
+		]
+		
+      
+
+    },
+	
+    {
+        "type": "Microsoft.Sql/servers",
+        "kind": "v12.0",
+        "name": "[variables('DBname')]",
+        "apiVersion": "[variables('SQLapi')]",
+        "location": "[parameters('location')]",
+        "scale": null,
+        "properties": {
+            "administratorLogin": "[variables('sqladminUserName')]",
+            "administratorLoginPassword": "[parameters('adminLoginPassword')]",
+            "version": "12.0"
+        },
+        "dependsOn": []
+    },
+	{
+        "type": "Microsoft.Sql/servers/databases",
+        "kind": "v12.0",
+        "name": "[variables('DBsession')]",
+        "apiVersion": "[variables('SQLapi')]",
+        "location": "[parameters('location')]",
+		"properties": {
+            "collation": "SQL_Latin1_General_CP1_CI_AS",
+			"requestedServiceObjectiveName": "Basic"
+        },
+        "dependsOn": [
+			"[resourceId('Microsoft.Sql/servers', variables('DBname'))]"
+        ]
+    },
+	{
+        "type": "Microsoft.Sql/servers/databases",
+        "kind": "v12.0",
+        "name": "[variables('DBoutsystems')]",
+        "apiVersion": "[variables('SQLapi')]",
+        "location": "[parameters('location')]",
+        "properties": {
+            "collation": "SQL_Latin1_General_CP1_CI_AS",
+			"requestedServiceObjectiveName": "S1"
+        },
+        "dependsOn": [
+			"[resourceId('Microsoft.Sql/servers', variables('DBname'))]"
+        ]
+    },
+	        
+	{
+        "type": "Microsoft.Sql/servers/firewallRules",
+        "kind": "v12.0",
+        "name": "[variables('AllowAllInternal')]",
+        "apiVersion": "2014-04-01-preview",
+        "location": "[parameters('location')]",
+        "scale": null,
+        "properties": {
+            "startIpAddress": "0.0.0.0",
+            "endIpAddress": "0.0.0.0"
+        },
+        "dependsOn": [
+            "[resourceId('Microsoft.Sql/servers', variables('DBname'))]"
+        ]
+    },
+	
+		{
+        "type": "Microsoft.Sql/servers/firewallRules",
+        "kind": "v12.0",
+        "name": "[variables('AllowPIPVM')]",
+        "apiVersion": "2014-04-01-preview",
+        "location": "[parameters('location')]",
+        "scale": null,
+        "properties": {
+            "startIpAddress": "[reference('Microsoft.Network/publicIPAddresses/OUTSYSTEMS-PIP','2015-06-15').ipAddress]",
+            "endIpAddress": "[reference('Microsoft.Network/publicIPAddresses/OUTSYSTEMS-PIP','2015-06-15').ipAddress]"
+        },
+        "dependsOn": [
+            "[resourceId('Microsoft.Sql/servers', variables('DBname'))]",
+			"[resourceId('Microsoft.Network/publicIPAddresses', 'OUTSYSTEMS-PIP')]"
+            ]
+    },
+	
+
+	{
+      "apiVersion": "[variables('APIVersion')]",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "VNETSG",
+      "location": "[parameters('location')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "rdp_rule",
+            "properties": {
+              "description": "Allow RDP",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "Internet",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "web_rule",
+            "properties": {
+              "description": "Allow WEB",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "80",
+              "sourceAddressPrefix": "Internet",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 110,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "https_rule",
+            "properties": {
+              "description": "Allow https",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "443",
+              "sourceAddressPrefix": "Internet",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 120,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+    },
+	
+	{
+      "name": "VNET",
+      "type": "Microsoft.Network/virtualNetworks",
+      "location": "[parameters('location')]",
+      "apiVersion": "[variables('APIVersion')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkSecurityGroups/', 'VNETSG')]"
+      ],
+      "tags": {
+        "displayName": "VNET"
+      },
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "11.0.0.0/24"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "Subnet",
+            "properties": {
+              "addressPrefix": "11.0.0.0/25",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'VNETSG')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+	
+	{
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "OUTSYSTEMS-PIP",
+      "location": "[parameters('location')]",
+      "properties": {
+        "publicIPAllocationMethod": "Static"
+      }
+    },
+	
+	{
+      "name": "OUTSYSTEMS-NIC",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/publicIPAddresses/', 'OUTSYSTEMS-PIP')]",
+		"[concat('Microsoft.Network/virtualNetworks/', 'VNET')]"
+      ],
+      "apiVersion": "2015-06-15",
+
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[concat(variables('vnetID'),'/subnets/','Subnet')]"
+              },
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'OUTSYSTEMS-PIP')]"
+              }
+            }
+          }
+        ]
+      }
+    }
+
+  ],
+  "outputs": {
+   }
+}

@@ -39,16 +39,6 @@
 			  "constraints": {
                 "required": true				
               }
-            },
-			{
-              "name": "sqlname",
-              "type": "Microsoft.Common.TextBox",
-              "label": "DB name prefix",
-              "toolTip": "SQL database name prefix",
-              "defaultValue": "",
-              "constraints": {
-                "required": true				
-              }
             }
 
           ]
@@ -57,7 +47,7 @@
           "name": "VMsetup",
           "label": "Virtual Machine Setup",
           "subLabel": {
-            "preValidation": "Configure the Front-End Environment",
+            "preValidation": "Configure the Virtual Machine settings",
             "postValidation": "Done"
           },
           "bladeTitle": "VM Settings",
@@ -105,7 +95,6 @@
       "outputs": {
         "adminUserName": "[steps('TrialSetup').adminUsername]",
         "adminLoginPassword": "[steps('TrialSetup').adminPassword.password]",
-		"DBnameparam": "[steps('TrialSetup').sqlname]",
 		"VMName": "[steps('VMsetup').FENAME]",
 		"VMSize": "[steps('VMsetup').FEVmSize]",
         "location": "[location()]"

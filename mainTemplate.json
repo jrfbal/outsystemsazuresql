@@ -9,16 +9,12 @@
 	  "adminLoginPassword": {
       "type": "securestring"
     },
-	"DBnameparam": {
-      "type": "string",
-      "minLength": 1
-    },
 	"location": {
       "type": "string"
     },
 	"VMSize":{
       "type": "string",
-      "defaultValue": "Standard_D1_v2"
+      "defaultValue": "Standard_F4"
     },
 	"VMName":{
       "type": "string",
@@ -27,7 +23,7 @@
   },
   "variables": {
     "SQLapi": "2014-04-01",
-	"DBname": "[concat(parameters('DBnameparam'),uniqueString(resourceGroup().id))]",
+	"DBname": "[concat('outsystems-trial-',uniqueString(resourceGroup().id))]",
     "DBsession": "[concat(variables('DBname'),'/','OSSession')]",
 	"DBoutsystems": "[concat(variables('DBname'),'/','OutSystems')]",
     "AllowAllInternal": "[concat(variables('DBname'),'/','AllowAllWindowsAzureIps')]",	
@@ -36,8 +32,8 @@
 	"vnetID": "[resourceId('Microsoft.Network/virtualNetworks', 'VNET')]",
 	"ImagePublisher": "MicrosoftWindowsServer",
 	"ImageOffer": "WindowsServer",
-	"WindowsOSVersion": "2016-Datacenter"
-	
+	"WindowsOSVersion": "2016-Datacenter",
+	"sqladminUserName": "[concat(parameters('adminUserName'),'-sql')]"	
   },
   "resources": [
   
@@ -52,7 +48,7 @@
 	  "type": "Microsoft.Compute/virtualMachines",
       "properties": {
         "hardwareProfile": {
-          "vmSize": "[variables('VMSize')]"
+          "vmSize": "[parameters('VMSize')]"
         },
         "osProfile": {
           "computerName": "[parameters('VMName')]",
@@ -94,27 +90,34 @@
         "publisher": "Microsoft.Compute",
         "type": "CustomScriptExtension",
         "typeHandlerVersion": "1.9",
-        "autoUpgradeMinorVersion": true,
+        "autoUpgradeMinorVersion": false,
         "settings": {
             "fileUris": [
-                "https://outsysscripts.blob.core.windows.net/scrpt/outsysdeploy.ps1"
+                "https://outsystemstrialsources.blob.core.windows.net/bin/NDP461-KB3102436-x86-x64-AllOS-ENU.exe",
+				"https://outsystemstrialsources.blob.core.windows.net/bin/BuildTools_Full.exe",
+				"https://outsystemstrialsources.blob.core.windows.net/bin/DevelopmentEnvironment.exe",
+				"https://outsystemstrialsources.blob.core.windows.net/bin/PlatformServer.exe",
+				"https://outsystemstrialsources.blob.core.windows.net/bin/outsysconfig.ps1",
+				"https://outsystemstrialsources.blob.core.windows.net/bin/OSStartup.bat",
+				"https://outsystemstrialsources.blob.core.windows.net/bin/license.lic",
+				"https://outsystemstrialsources.blob.core.windows.net/bin/web.zip",
+				"https://outsystemstrialsources.blob.core.windows.net/bin/temp.zip"			
             ]
         },
         "protectedSettings": {
-            "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File outsysdeploy.ps1 -dbname ', variables('DBname'), ' -adminname ',  parameters('adminUserName'), ' -adminpwd ',parameters('adminLoginPassword') )]",
-            "storageAccountName": "outsysscripts",
-            "storageAccountKey": "ezj78qFinmAm/92vD62m4isPHVT1HhRcZJlceG7RQ5rmj9uQyBqfecgho1II4TFHhSHjU5dQuotzdLQgIYm6gw=="
+		"commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File outsysconfig.ps1 -dbname ', variables('DBname'), ' -adminname ',  variables('sqladminUserName'), ' -adminpwd ', parameters('adminLoginPassword'))]",
+            "storageAccountName": "outsystemstrialsources",
+            "storageAccountKey": "Ok+pbaIb5isxjgjok/NJwnZyYLJ2WZ6Uj46KdfM24EZy5FMULTKttiBkGoWMzHlEbj4EdEJbNN/faT4DSHuzcQ=="
         }
 			}
 		}
 		
-		]
 		
-      
+		]
+	      
 
     },
 	
-
     {
         "type": "Microsoft.Sql/servers",
         "kind": "v12.0",
@@ -123,7 +126,7 @@
         "location": "[parameters('location')]",
         "scale": null,
         "properties": {
-            "administratorLogin": "[parameters('adminUserName')]",
+            "administratorLogin": "[variables('sqladminUserName')]",
             "administratorLoginPassword": "[parameters('adminLoginPassword')]",
             "version": "12.0"
         },
@@ -151,7 +154,7 @@
         "location": "[parameters('location')]",
         "properties": {
             "collation": "SQL_Latin1_General_CP1_CI_AS",
-			"requestedServiceObjectiveName": "S1"
+			"requestedServiceObjectiveName": "S3"
         },
         "dependsOn": [
 			"[resourceId('Microsoft.Sql/servers', variables('DBname'))]"
@@ -164,6 +167,9 @@
         "name": "[variables('AllowAllInternal')]",
         "apiVersion": "2014-04-01-preview",
         "location": "[parameters('location')]",
+		"dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/', parameters('VMName'))]"
+          ],
         "scale": null,
         "properties": {
             "startIpAddress": "0.0.0.0",
@@ -197,6 +203,9 @@
       "type": "Microsoft.Network/networkSecurityGroups",
       "name": "VNETSG",
       "location": "[parameters('location')]",
+	  "dependsOn": [
+
+      ],
       "properties": {
         "securityRules": [
           {
