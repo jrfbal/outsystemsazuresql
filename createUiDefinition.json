@@ -19,7 +19,7 @@
               "name": "adminUsername",
               "type": "Microsoft.Compute.UserNameTextBox",
               "label": "Username",
-              "toolTip": "Admin username for the virtual machine and SQL server.",
+              "toolTip": "Admin username for the virtual machine.",
               "osPlatform": "Windows",
 			  "constraints": {
                 "required": true				
@@ -68,14 +68,16 @@
               "label": "Virtual machine size",
               "toolTip": "The size of the Front-End VMs",
               "recommendedSizes": [
-                "Standard_D2_v2",
-                "Standard_D3_v2"
+                "Standard_A2_v2",
+                "Standard_A3_v2"
               ],
               "constraints": {
                 "allowedSizes": [
                   "Standard_D2_v2",
                   "Standard_D3_v2",
-                  "Standard_D4_v2"
+                  "Standard_D4_v2",
+				  "Standard_A2_v2",
+                  "Standard_A3_v2"
                 ],
 				"excludedSizes": []
               },
