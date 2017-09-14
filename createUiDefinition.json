@@ -57,7 +57,7 @@
               "type": "Microsoft.Common.TextBox",
               "label": "VM hostname",
               "toolTip": "Hostname for the VM.",
-              "defaultValue": "OutSystems",
+              "defaultValue": "OutSystems10",
               "constraints": {
                 "required": true
               }
