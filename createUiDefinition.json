@@ -26,20 +26,23 @@
               }
             },
 			{
-              "name": "adminPassword",
-              "type": "Microsoft.Compute.CredentialsCombo",
-			  "osPlatform": "Windows",
-              "label": {
-                "password": "Password",
-                "confirmPassword": "Confirm password"
-              },
-              "toolTip": {
-                "password": "Admin password for the VM and SQL."
-              },
+			  "name": "adminPassword",
+			  "type": "Microsoft.Common.PasswordBox",
+			  "label": {
+				"password": "Password",
+				"confirmPassword": "Confirm password"
+			  },
+			  "toolTip": "Admin password for the VM and SQL.",
 			  "constraints": {
-                "required": true				
-              }
-            }
+				"required": true,
+				"regex": "^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{10,20}$",
+				"validationMessage": "Ok"
+			  },
+			  "options": {
+				"hideConfirmation": false
+			  },
+			  "visible": true
+			}
 
           ]
         },
