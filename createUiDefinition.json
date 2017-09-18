@@ -99,7 +99,7 @@
       ],
       "outputs": {
         "adminUserName": "[steps('TrialSetup').adminUsername]",
-        "adminLoginPassword": "[steps('TrialSetup').adminPassword.password]",
+        "adminLoginPassword": "[steps('TrialSetup').adminPassword]",
 		"VMName": "[steps('VMsetup').FENAME]",
 		"VMSize": "[steps('VMsetup').FEVmSize]",
         "location": "[location()]"
