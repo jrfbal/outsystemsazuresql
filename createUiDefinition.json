@@ -35,8 +35,8 @@
 			  "toolTip": "Admin password for the VM and SQL.",
 			  "constraints": {
 				"required": true,
-				"regex": "^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{10,20}$",
-				"validationMessage": "Ok"
+				"regex": "^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{10,30}$",
+				"validationMessage": "Must contain an uppercase, lowercase, number and a symbol. From 10 up to 30 characters."
 			  },
 			  "options": {
 				"hideConfirmation": false
